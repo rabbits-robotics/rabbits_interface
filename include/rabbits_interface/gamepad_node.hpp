@@ -1,5 +1,5 @@
-#ifndef ATTRACTS_INTERFACE__GAMEPAD_NODE_HPP_
-#define ATTRACTS_INTERFACE__GAMEPAD_NODE_HPP_
+#ifndef RABBITS_INTERFACE__GAMEPAD_NODE_HPP_
+#define RABBITS_INTERFACE__GAMEPAD_NODE_HPP_
 
 #include <array>
 #include <string>
@@ -8,7 +8,7 @@
 #include <sensor_msgs/msg/joint_state.hpp>
 #include <sensor_msgs/msg/joy.hpp>
 
-#include <attracts_msgs/msg/attracts_command.hpp>
+#include <rabbits_msgs/msg/attracts_command.hpp>
 
 class Gamepad : public rclcpp::Node
 {
@@ -17,11 +17,11 @@ public:
 
   void JoyCB(const sensor_msgs::msg::Joy::SharedPtr msg);
   void TimerCB();
-  void UpdateCmdVel(attracts_msgs::msg::AttractsCommand & cmd);
-  void UpdatePositions(const attracts_msgs::msg::AttractsCommand & cmd);
+  void UpdateCmdVel(rabbits_msgs::msg::AttractsCommand & cmd);
+  void UpdatePositions(const rabbits_msgs::msg::AttractsCommand & cmd);
 
 private:
-  rclcpp::Publisher<attracts_msgs::msg::AttractsCommand>::SharedPtr cmd_pub_;
+  rclcpp::Publisher<rabbits_msgs::msg::AttractsCommand>::SharedPtr cmd_pub_;
   rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr joint_state_pub_;
   rclcpp::Subscription<sensor_msgs::msg::Joy>::SharedPtr joy_sub_;
   rclcpp::TimerBase::SharedPtr timer_;
@@ -37,4 +37,4 @@ private:
   std::array<double, 6> positions_;
 };
 
-#endif  // ATTRACTS_INTERFACE__GAMEPAD_NODE_HPP_
+#endif  // RABBITS_INTERFACE__GAMEPAD_NODE_HPP_

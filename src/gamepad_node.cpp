@@ -1,4 +1,4 @@
-#include "attracts_interface/gamepad_node.hpp"
+#include "rabbits_interface/gamepad_node.hpp"
 
 #include <cmath>
 #include <functional>
@@ -13,7 +13,7 @@ Gamepad::Gamepad(const rclcpp::NodeOptions & options)
   max_yaw_rot_vel_ = this->declare_parameter("max_yaw_rot_vel", 0.0);
   max_pitch_rot_vel_ = this->declare_parameter("max_pitch_rot_vel", 0.0);
 
-  cmd_pub_ = this->create_publisher<attracts_msgs::msg::AttractsCommand>("cmd", 10);
+  cmd_pub_ = this->create_publisher<rabbits_msgs::msg::AttractsCommand>("cmd", 10);
   joint_state_pub_ =
     this->create_publisher<sensor_msgs::msg::JointState>("/joint_states", 10);
   joy_sub_ = this->create_subscription<sensor_msgs::msg::Joy>(
@@ -30,14 +30,14 @@ void Gamepad::JoyCB(const sensor_msgs::msg::Joy::SharedPtr msg)
 
 void Gamepad::TimerCB()
 {
-  attracts_msgs::msg::AttractsCommand cmd;
+  rabbits_msgs::msg::AttractsCommand cmd;
   if (joy_msg_.axes.size() > 0 && joy_msg_.buttons.size() > 0) {
     UpdateCmdVel(cmd);
     UpdatePositions(cmd);
   }
 }
 
-void Gamepad::UpdateCmdVel(attracts_msgs::msg::AttractsCommand & cmd)
+void Gamepad::UpdateCmdVel(rabbits_msgs::msg::AttractsCommand & cmd)
 {
   // --- 足回り
   // 並進（ジョイスティック基本、十字キーで上書き）
@@ -85,7 +85,7 @@ void Gamepad::UpdateCmdVel(attracts_msgs::msg::AttractsCommand & cmd)
   cmd_pub_->publish(cmd);
 }
 
-void Gamepad::UpdatePositions(const attracts_msgs::msg::AttractsCommand & cmd)
+void Gamepad::UpdatePositions(const rabbits_msgs::msg::AttractsCommand & cmd)
 {
   rabcl::OmniDrive omni_drive(wheel_d_, body_d_);
   std::array<double, 6> joint_vel;
@@ -118,7 +118,7 @@ void Gamepad::UpdatePositions(const attracts_msgs::msg::AttractsCommand & cmd)
   joint_state_pub_->publish(joint_state);
 }
 
-#ifndef ATTRACTS_INTERFACE_EXCLUDE_MAIN
+#ifndef RABBITS_INTERFACE_EXCLUDE_MAIN
 int main(int argc, char ** argv)
 {
   rclcpp::init(argc, argv);

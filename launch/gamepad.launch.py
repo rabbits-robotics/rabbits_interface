@@ -23,7 +23,7 @@ def generate_launch_description():
     )
 
     gamepad_node = Node(
-        package='attracts_interface',
+        package='rabbits_interface',
         executable='gamepad_node',
         name='gamepad_node',
         output='screen',

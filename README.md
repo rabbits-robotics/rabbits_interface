@@ -1,3 +1,3 @@
-# attracts_interface
+# rabbits_interface
 
-[![CI](https://github.com/rabbits-robotics/attracts_interface/actions/workflows/ci.yml/badge.svg)](https://github.com/rabbits-robotics/attracts_interface/actions/workflows/ci.yml)
+[![CI](https://github.com/rabbits-robotics/rabbits_interface/actions/workflows/ci.yml/badge.svg)](https://github.com/rabbits-robotics/rabbits_interface/actions/workflows/ci.yml)

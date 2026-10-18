@@ -4,7 +4,7 @@
 
 #include <rclcpp/rclcpp.hpp>
 
-#include "attracts_interface/game_client_node.hpp"
+#include "rabbits_interface/game_client_node.hpp"
 
 class GameClientTest : public ::testing::Test
 {
@@ -38,17 +38,17 @@ protected:
   std::shared_ptr<GameClient> node_;
 };
 
-static attracts_msgs::msg::GameDataInput MakeInput()
+static rabbits_msgs::msg::GameDataInput MakeInput()
 {
-  return attracts_msgs::msg::GameDataInput();
+  return rabbits_msgs::msg::GameDataInput();
 }
 
 TEST_F(GameClientTest, KeyWSetsChassisFwd)
 {
   auto input = MakeInput();
   input.key_w = true;
-  node_->GameDataInputCB(std::make_shared<attracts_msgs::msg::GameDataInput>(input));
-  attracts_msgs::msg::AttractsCommand cmd;
+  node_->GameDataInputCB(std::make_shared<rabbits_msgs::msg::GameDataInput>(input));
+  rabbits_msgs::msg::AttractsCommand cmd;
   node_->UpdateCmdVel(cmd);
   EXPECT_DOUBLE_EQ(1.0, cmd.chassis_vel.x);
 }
@@ -57,8 +57,8 @@ TEST_F(GameClientTest, KeySSetsChassisBwd)
 {
   auto input = MakeInput();
   input.key_s = true;
-  node_->GameDataInputCB(std::make_shared<attracts_msgs::msg::GameDataInput>(input));
-  attracts_msgs::msg::AttractsCommand cmd;
+  node_->GameDataInputCB(std::make_shared<rabbits_msgs::msg::GameDataInput>(input));
+  rabbits_msgs::msg::AttractsCommand cmd;
   node_->UpdateCmdVel(cmd);
   EXPECT_DOUBLE_EQ(-1.0, cmd.chassis_vel.x);
 }
@@ -67,8 +67,8 @@ TEST_F(GameClientTest, KeyASetsChassisLeft)
 {
   auto input = MakeInput();
   input.key_a = true;
-  node_->GameDataInputCB(std::make_shared<attracts_msgs::msg::GameDataInput>(input));
-  attracts_msgs::msg::AttractsCommand cmd;
+  node_->GameDataInputCB(std::make_shared<rabbits_msgs::msg::GameDataInput>(input));
+  rabbits_msgs::msg::AttractsCommand cmd;
   node_->UpdateCmdVel(cmd);
   EXPECT_DOUBLE_EQ(1.0, cmd.chassis_vel.y);
 }
@@ -77,8 +77,8 @@ TEST_F(GameClientTest, KeyDSetsChassisRight)
 {
   auto input = MakeInput();
   input.key_d = true;
-  node_->GameDataInputCB(std::make_shared<attracts_msgs::msg::GameDataInput>(input));
-  attracts_msgs::msg::AttractsCommand cmd;
+  node_->GameDataInputCB(std::make_shared<rabbits_msgs::msg::GameDataInput>(input));
+  rabbits_msgs::msg::AttractsCommand cmd;
   node_->UpdateCmdVel(cmd);
   EXPECT_DOUBLE_EQ(-1.0, cmd.chassis_vel.y);
 }
@@ -87,8 +87,8 @@ TEST_F(GameClientTest, KeyZSetsChassisRotCcw)
 {
   auto input = MakeInput();
   input.key_z = true;
-  node_->GameDataInputCB(std::make_shared<attracts_msgs::msg::GameDataInput>(input));
-  attracts_msgs::msg::AttractsCommand cmd;
+  node_->GameDataInputCB(std::make_shared<rabbits_msgs::msg::GameDataInput>(input));
+  rabbits_msgs::msg::AttractsCommand cmd;
   node_->UpdateCmdVel(cmd);
   EXPECT_DOUBLE_EQ(2.0, cmd.chassis_vel.z);
 }
@@ -97,8 +97,8 @@ TEST_F(GameClientTest, KeyCSetsChassisRotCw)
 {
   auto input = MakeInput();
   input.key_c = true;
-  node_->GameDataInputCB(std::make_shared<attracts_msgs::msg::GameDataInput>(input));
-  attracts_msgs::msg::AttractsCommand cmd;
+  node_->GameDataInputCB(std::make_shared<rabbits_msgs::msg::GameDataInput>(input));
+  rabbits_msgs::msg::AttractsCommand cmd;
   node_->UpdateCmdVel(cmd);
   EXPECT_DOUBLE_EQ(-2.0, cmd.chassis_vel.z);
 }
@@ -107,8 +107,8 @@ TEST_F(GameClientTest, MouseDeltaXSetsYaw)
 {
   auto input = MakeInput();
   input.mouse_delta_x = 400;  // yaw_pos = 0 + 400/400 = 1.0
-  node_->GameDataInputCB(std::make_shared<attracts_msgs::msg::GameDataInput>(input));
-  attracts_msgs::msg::AttractsCommand cmd;
+  node_->GameDataInputCB(std::make_shared<rabbits_msgs::msg::GameDataInput>(input));
+  rabbits_msgs::msg::AttractsCommand cmd;
   node_->UpdateCmdVel(cmd);
   EXPECT_DOUBLE_EQ(1.0, cmd.yaw_pos);
 }
@@ -117,8 +117,8 @@ TEST_F(GameClientTest, YawWrapsNegative)
 {
   auto input = MakeInput();
   input.mouse_delta_x = -1000;  // yaw = -10, fmod → negative → add 2π
-  node_->GameDataInputCB(std::make_shared<attracts_msgs::msg::GameDataInput>(input));
-  attracts_msgs::msg::AttractsCommand cmd;
+  node_->GameDataInputCB(std::make_shared<rabbits_msgs::msg::GameDataInput>(input));
+  rabbits_msgs::msg::AttractsCommand cmd;
   node_->UpdateCmdVel(cmd);
   EXPECT_GE(cmd.yaw_pos, 0.0);
 }
@@ -127,8 +127,8 @@ TEST_F(GameClientTest, PitchClampedLow)
 {
   auto input = MakeInput();
   input.mouse_delta_y = -1000;  // pitch = -10 → clamped to -M_PI/12
-  node_->GameDataInputCB(std::make_shared<attracts_msgs::msg::GameDataInput>(input));
-  attracts_msgs::msg::AttractsCommand cmd;
+  node_->GameDataInputCB(std::make_shared<rabbits_msgs::msg::GameDataInput>(input));
+  rabbits_msgs::msg::AttractsCommand cmd;
   node_->UpdateCmdVel(cmd);
   EXPECT_NEAR(-M_PI / 12, cmd.pitch_pos, 1e-6);
 }
@@ -137,8 +137,8 @@ TEST_F(GameClientTest, PitchClampedHigh)
 {
   auto input = MakeInput();
   input.mouse_delta_y = 1000;  // pitch = 10 → clamped to M_PI/6
-  node_->GameDataInputCB(std::make_shared<attracts_msgs::msg::GameDataInput>(input));
-  attracts_msgs::msg::AttractsCommand cmd;
+  node_->GameDataInputCB(std::make_shared<rabbits_msgs::msg::GameDataInput>(input));
+  rabbits_msgs::msg::AttractsCommand cmd;
   node_->UpdateCmdVel(cmd);
   EXPECT_NEAR(M_PI / 6, cmd.pitch_pos, 1e-6);
 }
@@ -147,8 +147,8 @@ TEST_F(GameClientTest, MouseRightButtonSetsFire)
 {
   auto input = MakeInput();
   input.mouse_right_button = true;
-  node_->GameDataInputCB(std::make_shared<attracts_msgs::msg::GameDataInput>(input));
-  attracts_msgs::msg::AttractsCommand cmd;
+  node_->GameDataInputCB(std::make_shared<rabbits_msgs::msg::GameDataInput>(input));
+  rabbits_msgs::msg::AttractsCommand cmd;
   node_->UpdateCmdVel(cmd);
   EXPECT_EQ(1, cmd.fire_mode);
 }
@@ -158,24 +158,24 @@ TEST_F(GameClientTest, MouseLeftButtonSetsLoad)
   auto input = MakeInput();
   input.mouse_right_button = true;  // load requires right button held
   input.mouse_left_button = true;
-  node_->GameDataInputCB(std::make_shared<attracts_msgs::msg::GameDataInput>(input));
-  attracts_msgs::msg::AttractsCommand cmd;
+  node_->GameDataInputCB(std::make_shared<rabbits_msgs::msg::GameDataInput>(input));
+  rabbits_msgs::msg::AttractsCommand cmd;
   node_->UpdateCmdVel(cmd);
   EXPECT_EQ(1, cmd.load_mode);
 }
 
 TEST_F(GameClientTest, LoadAllowedWhenHeatLow)
 {
-  attracts_msgs::msg::GameDataRobot robot;
+  rabbits_msgs::msg::GameDataRobot robot;
   robot.max_heat = 60;
   robot.current_heat = 0;
-  node_->GameDataRobotCB(std::make_shared<attracts_msgs::msg::GameDataRobot>(robot));
+  node_->GameDataRobotCB(std::make_shared<rabbits_msgs::msg::GameDataRobot>(robot));
 
   auto input = MakeInput();
   input.mouse_right_button = true;
   input.mouse_left_button = true;
-  node_->GameDataInputCB(std::make_shared<attracts_msgs::msg::GameDataInput>(input));
-  attracts_msgs::msg::AttractsCommand cmd;
+  node_->GameDataInputCB(std::make_shared<rabbits_msgs::msg::GameDataInput>(input));
+  rabbits_msgs::msg::AttractsCommand cmd;
   node_->UpdateCmdVel(cmd);
   EXPECT_EQ(1, cmd.load_mode);
 }
@@ -183,16 +183,16 @@ TEST_F(GameClientTest, LoadAllowedWhenHeatLow)
 // 次の射撃で熱量が最大に達する場合は装填を抑制する（fire_heat=10, max=60 → 50で抑制）
 TEST_F(GameClientTest, LoadBlockedWhenHeatNearMax)
 {
-  attracts_msgs::msg::GameDataRobot robot;
+  rabbits_msgs::msg::GameDataRobot robot;
   robot.max_heat = 60;
   robot.current_heat = 50;
-  node_->GameDataRobotCB(std::make_shared<attracts_msgs::msg::GameDataRobot>(robot));
+  node_->GameDataRobotCB(std::make_shared<rabbits_msgs::msg::GameDataRobot>(robot));
 
   auto input = MakeInput();
   input.mouse_right_button = true;
   input.mouse_left_button = true;
-  node_->GameDataInputCB(std::make_shared<attracts_msgs::msg::GameDataInput>(input));
-  attracts_msgs::msg::AttractsCommand cmd;
+  node_->GameDataInputCB(std::make_shared<rabbits_msgs::msg::GameDataInput>(input));
+  rabbits_msgs::msg::AttractsCommand cmd;
   node_->UpdateCmdVel(cmd);
   EXPECT_EQ(0, cmd.load_mode);
   // 射撃自体は抑制しない
@@ -205,8 +205,8 @@ TEST_F(GameClientTest, LoadAllowedWhenNoRobotData)
   auto input = MakeInput();
   input.mouse_right_button = true;
   input.mouse_left_button = true;
-  node_->GameDataInputCB(std::make_shared<attracts_msgs::msg::GameDataInput>(input));
-  attracts_msgs::msg::AttractsCommand cmd;
+  node_->GameDataInputCB(std::make_shared<rabbits_msgs::msg::GameDataInput>(input));
+  rabbits_msgs::msg::AttractsCommand cmd;
   node_->UpdateCmdVel(cmd);
   EXPECT_EQ(1, cmd.load_mode);
 }
@@ -215,8 +215,8 @@ TEST_F(GameClientTest, KeyRSetsLoad2)
 {
   auto input = MakeInput();
   input.key_r = true;
-  node_->GameDataInputCB(std::make_shared<attracts_msgs::msg::GameDataInput>(input));
-  attracts_msgs::msg::AttractsCommand cmd;
+  node_->GameDataInputCB(std::make_shared<rabbits_msgs::msg::GameDataInput>(input));
+  rabbits_msgs::msg::AttractsCommand cmd;
   node_->UpdateCmdVel(cmd);
   EXPECT_EQ(2, cmd.load_mode);
 }
@@ -225,22 +225,22 @@ TEST_F(GameClientTest, KeyShiftSetsChassisModeOn)
 {
   auto input = MakeInput();
   input.key_shift = true;
-  node_->GameDataInputCB(std::make_shared<attracts_msgs::msg::GameDataInput>(input));
-  attracts_msgs::msg::AttractsCommand cmd;
+  node_->GameDataInputCB(std::make_shared<rabbits_msgs::msg::GameDataInput>(input));
+  rabbits_msgs::msg::AttractsCommand cmd;
   node_->UpdateCmdVel(cmd);
   EXPECT_EQ(1, cmd.chassis_mode);
 }
 
 TEST_F(GameClientTest, SpeedModeAlwaysZero)
 {
-  attracts_msgs::msg::AttractsCommand cmd;
+  rabbits_msgs::msg::AttractsCommand cmd;
   node_->UpdateCmdVel(cmd);
   EXPECT_EQ(0, cmd.speed_mode);
 }
 
 TEST_F(GameClientTest, UpdatePositionsRuns)
 {
-  attracts_msgs::msg::AttractsCommand cmd;
+  rabbits_msgs::msg::AttractsCommand cmd;
   node_->UpdateCmdVel(cmd);
   EXPECT_NO_THROW(node_->UpdatePositions(cmd));
 }
@@ -249,8 +249,8 @@ TEST_F(GameClientTest, GameDataInputCBSetsMsg)
 {
   auto input = MakeInput();
   input.key_w = true;
-  node_->GameDataInputCB(std::make_shared<attracts_msgs::msg::GameDataInput>(input));
-  attracts_msgs::msg::AttractsCommand cmd;
+  node_->GameDataInputCB(std::make_shared<rabbits_msgs::msg::GameDataInput>(input));
+  rabbits_msgs::msg::AttractsCommand cmd;
   node_->UpdateCmdVel(cmd);
   EXPECT_DOUBLE_EQ(1.0, cmd.chassis_vel.x);
 }
@@ -260,16 +260,16 @@ TEST_F(GameClientTest, TimerDoesNotReintegrateMouse)
 {
   auto input = MakeInput();
   input.mouse_delta_x = 400;  // 1フレームで yaw = 1.0
-  node_->GameDataInputCB(std::make_shared<attracts_msgs::msg::GameDataInput>(input));
+  node_->GameDataInputCB(std::make_shared<rabbits_msgs::msg::GameDataInput>(input));
 
-  attracts_msgs::msg::AttractsCommand cmd1;
+  rabbits_msgs::msg::AttractsCommand cmd1;
   node_->UpdateCmdVel(cmd1);
   EXPECT_DOUBLE_EQ(1.0, cmd1.yaw_pos);
 
   // 同じ入力のまま timer が複数回回っても再積分されない
-  attracts_msgs::msg::AttractsCommand cmd2;
+  rabbits_msgs::msg::AttractsCommand cmd2;
   node_->UpdateCmdVel(cmd2);
-  attracts_msgs::msg::AttractsCommand cmd3;
+  rabbits_msgs::msg::AttractsCommand cmd3;
   node_->UpdateCmdVel(cmd3);
   EXPECT_DOUBLE_EQ(1.0, cmd3.yaw_pos);
 }
@@ -279,11 +279,11 @@ TEST_F(GameClientTest, RepeatedFramesAccumulateYaw)
 {
   auto input = MakeInput();
   input.mouse_delta_x = 400;
-  auto msg = std::make_shared<attracts_msgs::msg::GameDataInput>(input);
+  auto msg = std::make_shared<rabbits_msgs::msg::GameDataInput>(input);
   node_->GameDataInputCB(msg);
   node_->GameDataInputCB(msg);  // 2フレーム受信 → yaw = 2.0
 
-  attracts_msgs::msg::AttractsCommand cmd;
+  rabbits_msgs::msg::AttractsCommand cmd;
   node_->UpdateCmdVel(cmd);
   EXPECT_DOUBLE_EQ(2.0, cmd.yaw_pos);
 }

@@ -14,7 +14,7 @@ def generate_launch_description():
     ld.add_action(DeclareLaunchArgument('fire_heat', default_value='10.0'))  # 1射の熱量増加量
 
     game_client_node = Node(
-        package='attracts_interface',
+        package='rabbits_interface',
         executable='game_client_node',
         name='game_client_node',
         output='screen',

@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>attracts_interface</name>
+  <name>rabbits_interface</name>
   <version>0.0.0</version>
   <description>TODO: Package description</description>
   <maintainer email="kota0314yama@gmail.com">kota0314</maintainer>
@@ -14,7 +14,7 @@
 
   <depend>rclcpp</depend>
   <depend>sensor_msgs</depend>
-  <depend>attracts_msgs</depend>
+  <depend>rabbits_msgs</depend>
   <depend>rabcl</depend>
 
   <test_depend>ament_lint_auto</test_depend>

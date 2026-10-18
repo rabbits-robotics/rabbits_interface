@@ -1,4 +1,4 @@
-#include "attracts_interface/game_client_node.hpp"
+#include "rabbits_interface/game_client_node.hpp"
 
 #include <cmath>
 #include <functional>
@@ -14,13 +14,13 @@ GameClient::GameClient(const rclcpp::NodeOptions & options)
   max_pitch_rot_vel_ = this->declare_parameter("max_pitch_rot_vel", 0.0);
   fire_heat_ = this->declare_parameter("fire_heat", 10.0);
 
-  cmd_pub_ = this->create_publisher<attracts_msgs::msg::AttractsCommand>("cmd", 10);
+  cmd_pub_ = this->create_publisher<rabbits_msgs::msg::AttractsCommand>("cmd", 10);
   joint_state_pub_ =
     this->create_publisher<sensor_msgs::msg::JointState>("/joint_states", 10);
-  game_data_input_sub_ = this->create_subscription<attracts_msgs::msg::GameDataInput>(
+  game_data_input_sub_ = this->create_subscription<rabbits_msgs::msg::GameDataInput>(
     "/game_data_input", 10,
     std::bind(&GameClient::GameDataInputCB, this, std::placeholders::_1));
-  game_data_robot_sub_ = this->create_subscription<attracts_msgs::msg::GameDataRobot>(
+  game_data_robot_sub_ = this->create_subscription<rabbits_msgs::msg::GameDataRobot>(
     "/game_data_robot", 10,
     std::bind(&GameClient::GameDataRobotCB, this, std::placeholders::_1));
   timer_ = this->create_wall_timer(
@@ -28,7 +28,7 @@ GameClient::GameClient(const rclcpp::NodeOptions & options)
     std::bind(&GameClient::TimerCB, this));
 }
 
-void GameClient::GameDataInputCB(const attracts_msgs::msg::GameDataInput::SharedPtr msg)
+void GameClient::GameDataInputCB(const rabbits_msgs::msg::GameDataInput::SharedPtr msg)
 {
   game_data_input_msg_ = *msg;
 
@@ -50,7 +50,7 @@ void GameClient::GameDataInputCB(const attracts_msgs::msg::GameDataInput::Shared
   }
 }
 
-void GameClient::GameDataRobotCB(const attracts_msgs::msg::GameDataRobot::SharedPtr msg)
+void GameClient::GameDataRobotCB(const rabbits_msgs::msg::GameDataRobot::SharedPtr msg)
 {
   game_data_robot_msg_ = *msg;
 }
@@ -67,12 +67,12 @@ bool GameClient::CanLoad() const
 
 void GameClient::TimerCB()
 {
-  attracts_msgs::msg::AttractsCommand cmd;  // rad/s
+  rabbits_msgs::msg::AttractsCommand cmd;  // rad/s
   UpdateCmdVel(cmd);
   UpdatePositions(cmd);
 }
 
-void GameClient::UpdateCmdVel(attracts_msgs::msg::AttractsCommand & cmd)
+void GameClient::UpdateCmdVel(rabbits_msgs::msg::AttractsCommand & cmd)
 {
   // --- 足回り
   // 並進
@@ -118,7 +118,7 @@ void GameClient::UpdateCmdVel(attracts_msgs::msg::AttractsCommand & cmd)
   cmd_pub_->publish(cmd);
 }
 
-void GameClient::UpdatePositions(const attracts_msgs::msg::AttractsCommand & cmd)
+void GameClient::UpdatePositions(const rabbits_msgs::msg::AttractsCommand & cmd)
 {
   rabcl::OmniDrive omni_drive(wheel_d_, body_d_);
   std::array<double, 6> joint_vel;
@@ -148,7 +148,7 @@ void GameClient::UpdatePositions(const attracts_msgs::msg::AttractsCommand & cmd
   joint_state_pub_->publish(joint_state);
 }
 
-#ifndef ATTRACTS_INTERFACE_EXCLUDE_MAIN
+#ifndef RABBITS_INTERFACE_EXCLUDE_MAIN
 int main(int argc, char ** argv)
 {
   rclcpp::init(argc, argv);
