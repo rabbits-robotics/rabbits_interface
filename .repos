@@ -1,8 +1,4 @@
 repositories:
-  rabcl:
-    type: git
-    url: https://github.com/rabbits-robotics/rabcl.git
-    version: main
   rabbits_msgs:
     type: git
     url: https://github.com/rabbits-robotics/rabbits_msgs.git
