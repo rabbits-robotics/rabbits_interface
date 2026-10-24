@@ -12,6 +12,9 @@ def generate_launch_description():
     ld.add_action(DeclareLaunchArgument('max_yaw_rot_vel', default_value='2.0'))  # rad/s
     ld.add_action(DeclareLaunchArgument('max_pitch_rot_vel', default_value='2.0'))  # rad/s
     ld.add_action(DeclareLaunchArgument('fire_heat', default_value='10.0'))  # 1射の熱量増加量
+    ld.add_action(DeclareLaunchArgument('walk_scale', default_value='0.4'))  # 歩き（Ctrl / △）の速度倍率
+    ld.add_action(DeclareLaunchArgument('body_height_default', default_value='0.5'))  # 通常時の車高（0〜1）
+    ld.add_action(DeclareLaunchArgument('lean_roll', default_value='0.15'))  # リーンのロール [rad]
 
     game_client_node = Node(
         package='rabbits_interface',
@@ -25,6 +28,9 @@ def generate_launch_description():
             'max_yaw_rot_vel': LaunchConfiguration('max_yaw_rot_vel'),
             'max_pitch_rot_vel': LaunchConfiguration('max_pitch_rot_vel'),
             'fire_heat': LaunchConfiguration('fire_heat'),
+            'walk_scale': LaunchConfiguration('walk_scale'),
+            'body_height_default': LaunchConfiguration('body_height_default'),
+            'lean_roll': LaunchConfiguration('lean_roll'),
         }],
     )
 

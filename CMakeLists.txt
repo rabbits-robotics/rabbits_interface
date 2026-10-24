@@ -14,7 +14,9 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
+find_package(std_msgs REQUIRED)
 find_package(rabbits_msgs REQUIRED)
+find_package(rabcl REQUIRED)
 
 include_directories(include)
 
@@ -25,7 +27,9 @@ add_executable(gamepad_node
 ament_target_dependencies(gamepad_node
   rclcpp
   sensor_msgs
+  std_msgs
   rabbits_msgs
+  rabcl
 )
 
 add_executable(game_client_node
@@ -34,7 +38,9 @@ add_executable(game_client_node
 ament_target_dependencies(game_client_node
   rclcpp
   sensor_msgs
+  std_msgs
   rabbits_msgs
+  rabcl
 )
 
 install(TARGETS
@@ -58,11 +64,11 @@ if(BUILD_TESTING)
 
   # Libraries for tests (main() excluded via preprocessor)
   add_library(gamepad_lib STATIC src/gamepad_node.cpp)
-  ament_target_dependencies(gamepad_lib rclcpp sensor_msgs rabbits_msgs)
+  ament_target_dependencies(gamepad_lib rclcpp sensor_msgs std_msgs rabbits_msgs rabcl)
   target_compile_definitions(gamepad_lib PRIVATE RABBITS_INTERFACE_EXCLUDE_MAIN)
 
   add_library(game_client_lib STATIC src/game_client_node.cpp)
-  ament_target_dependencies(game_client_lib rclcpp sensor_msgs rabbits_msgs)
+  ament_target_dependencies(game_client_lib rclcpp sensor_msgs std_msgs rabbits_msgs rabcl)
   target_compile_definitions(game_client_lib PRIVATE RABBITS_INTERFACE_EXCLUDE_MAIN)
 
   ament_add_gtest(test_game_client test/test_game_client.cpp)

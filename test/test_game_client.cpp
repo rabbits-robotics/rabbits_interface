@@ -6,6 +6,7 @@
 
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/joint_state.hpp>
+#include <std_msgs/msg/empty.hpp>
 
 #include "rabbits_interface/game_client_node.hpp"
 #include "rabbits_interface/reference_builder.hpp"
@@ -34,6 +35,9 @@ protected:
       rclcpp::Parameter("max_omni_rot_vel", 2.0),
       rclcpp::Parameter("max_yaw_rot_vel", 3.0),
       rclcpp::Parameter("max_pitch_rot_vel", 3.0),
+      rclcpp::Parameter("walk_scale", 0.4),
+      rclcpp::Parameter("body_height_default", 0.5),
+      rclcpp::Parameter("lean_roll", 0.15),
     });
     node_ = std::make_shared<GameClient>(options);
   }
@@ -101,6 +105,58 @@ TEST_F(GameClientTest, KeyCSetsChassisRotCw)
   EXPECT_DOUBLE_EQ(-2.0, Update(input).chassis_vel.z);
 }
 
+TEST_F(GameClientTest, CtrlScalesVelocityAndSetsWalk)
+{
+  auto input = MakeInput();
+  input.key_w = true;
+  input.key_z = true;
+  input.key_ctrl = true;
+  const auto cmd = Update(input);
+  EXPECT_DOUBLE_EQ(0.4, cmd.chassis_vel.x);
+  EXPECT_DOUBLE_EQ(0.8, cmd.chassis_vel.z);
+  EXPECT_EQ(0, GetMode(cmd, "speed"));
+}
+
+TEST_F(GameClientTest, DefaultIsRunAndDefaultHeight)
+{
+  const auto cmd = Update(MakeInput());
+  EXPECT_EQ(1, GetMode(cmd, "speed"));
+  EXPECT_FLOAT_EQ(0.5f, cmd.body_height);
+  EXPECT_FLOAT_EQ(0.0f, cmd.body_roll);
+  EXPECT_FLOAT_EQ(0.0f, cmd.body_pitch);
+}
+
+TEST_F(GameClientTest, ShiftCrouches)
+{
+  auto input = MakeInput();
+  input.key_shift = true;
+  const auto cmd = Update(input);
+  EXPECT_FLOAT_EQ(0.0f, cmd.body_height);
+  EXPECT_EQ(0, GetMode(cmd, "chassis"));  // Shift では無限回転にならない
+}
+
+TEST_F(GameClientTest, SpaceSetsInfiniteRotation)
+{
+  auto input = MakeInput();
+  input.key_space = true;
+  EXPECT_EQ(1, GetMode(Update(input), "chassis"));
+}
+
+TEST_F(GameClientTest, QELean)
+{
+  auto input = MakeInput();
+  input.key_q = true;
+  EXPECT_FLOAT_EQ(-0.15f, Update(input).body_roll);
+  input.key_q = false;
+  input.key_e = true;
+  EXPECT_FLOAT_EQ(0.15f, Update(input).body_roll);
+}
+
+TEST_F(GameClientTest, StabilizeAlwaysOn)
+{
+  EXPECT_EQ(1, GetMode(Update(MakeInput()), "stabilize"));
+}
+
 TEST_F(GameClientTest, MouseDeltaXSetsYaw)
 {
   auto input = MakeInput();
@@ -108,25 +164,42 @@ TEST_F(GameClientTest, MouseDeltaXSetsYaw)
   EXPECT_DOUBLE_EQ(1.0, GetJointPosition(Update(input), "yaw_joint"));
 }
 
-TEST_F(GameClientTest, YawWrapsNegative)
+TEST_F(GameClientTest, YawWrapsToPlusMinusPi)
 {
   auto input = MakeInput();
-  input.mouse_delta_x = -1000;  // yaw = -10, fmod → negative → add 2π
-  EXPECT_GE(GetJointPosition(Update(input), "yaw_joint"), 0.0);
+  input.mouse_delta_x = -1000;  // 1 回目 -2.5、2 回目 -5.0 → +1.28 に wrap
+  const double yaw = GetJointPosition(Update(input), "yaw_joint");
+  EXPECT_LE(std::fabs(yaw), M_PI);
+  const double yaw2 = GetJointPosition(Update(input), "yaw_joint");
+  EXPECT_LE(std::fabs(yaw2), M_PI);
+  EXPECT_NEAR(yaw2, -5.0 + 2.0 * M_PI, 1e-5);
 }
 
 TEST_F(GameClientTest, PitchClampedLow)
 {
   auto input = MakeInput();
-  input.mouse_delta_y = -1000;  // pitch = -10 → clamped to -M_PI/12
+  input.mouse_delta_y = -1000;  // pitch = -2.5 → clamped to -M_PI/12
   EXPECT_NEAR(-M_PI / 12, GetJointPosition(Update(input), "pitch_joint"), 1e-6);
 }
 
 TEST_F(GameClientTest, PitchClampedHigh)
 {
   auto input = MakeInput();
-  input.mouse_delta_y = 1000;  // pitch = 10 → clamped to M_PI/6
+  input.mouse_delta_y = 1000;  // pitch = 2.5 → clamped to M_PI/6
   EXPECT_NEAR(M_PI / 6, GetJointPosition(Update(input), "pitch_joint"), 1e-6);
+}
+
+TEST_F(GameClientTest, RebootResetsView)
+{
+  auto input = MakeInput();
+  input.mouse_delta_x = 400;
+  input.mouse_delta_y = 40;
+  EXPECT_DOUBLE_EQ(1.0, GetJointPosition(Update(input), "yaw_joint"));
+  node_->FirmwareRebootCB(std::make_shared<std_msgs::msg::Empty>());
+  ReferenceCommand cmd;
+  node_->UpdateCmdVel(cmd);
+  EXPECT_DOUBLE_EQ(0.0, GetJointPosition(cmd, "yaw_joint"));
+  EXPECT_DOUBLE_EQ(0.0, GetJointPosition(cmd, "pitch_joint"));
 }
 
 TEST_F(GameClientTest, MouseRightButtonSetsFire)
@@ -190,20 +263,6 @@ TEST_F(GameClientTest, KeyRSetsLoad2)
   EXPECT_EQ(2, GetMode(Update(input), "load"));
 }
 
-TEST_F(GameClientTest, KeyShiftSetsChassisModeOn)
-{
-  auto input = MakeInput();
-  input.key_shift = true;
-  EXPECT_EQ(1, GetMode(Update(input), "chassis"));
-}
-
-TEST_F(GameClientTest, SpeedModeAlwaysZero)
-{
-  ReferenceCommand cmd;
-  node_->UpdateCmdVel(cmd);
-  EXPECT_EQ(0, GetMode(cmd, "speed"));
-}
-
 TEST_F(GameClientTest, ReferenceCarriesYawPitchAndModes)
 {
   ReferenceCommand cmd;
@@ -212,8 +271,9 @@ TEST_F(GameClientTest, ReferenceCarriesYawPitchAndModes)
   EXPECT_EQ(cmd.joint_name[0], "yaw_joint");
   EXPECT_EQ(cmd.joint_name[1], "pitch_joint");
   EXPECT_EQ(cmd.joint_kd.size(), 2u);
-  ASSERT_EQ(cmd.mode_name.size(), 4u);
-  EXPECT_EQ(cmd.mode_value.size(), 4u);
+  ASSERT_EQ(cmd.mode_name.size(), 5u);
+  EXPECT_EQ(cmd.mode_name[4], "stabilize");
+  EXPECT_EQ(cmd.mode_value.size(), 5u);
 }
 
 TEST_F(GameClientTest, NoJointStatesPublished)
@@ -228,13 +288,6 @@ TEST_F(GameClientTest, NoJointStatesPublished)
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
   }
   EXPECT_EQ(count, 0);
-}
-
-TEST_F(GameClientTest, GameDataInputCBSetsMsg)
-{
-  auto input = MakeInput();
-  input.key_w = true;
-  EXPECT_DOUBLE_EQ(1.0, Update(input).chassis_vel.x);
 }
 
 // マウスは「受信フレームごとに1回だけ」積分される（timer の多重積分が起きない）

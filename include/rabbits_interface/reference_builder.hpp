@@ -19,10 +19,15 @@ constexpr const char * MODE_LOAD = "load";
 constexpr const char * MODE_FIRE = "fire";
 constexpr const char * MODE_SPEED = "speed";
 constexpr const char * MODE_CHASSIS = "chassis";
+constexpr const char * MODE_STABILIZE = "stabilize";
 
-// 砲塔 2 関節（位置指令のみ）と 4 モードを 0 で用意する
-inline void InitReference(rabbits_msgs::msg::ReferenceCommand & cmd)
+// 首 2 関節（位置指令のみ。値は視点の目標で、ファームが安定化時は世界座標として扱う）、
+// 車体姿勢（車高 body_height、ロール・ピッチ 0）、5 モード（stabilize は 1 = 常に安定化、他は 0）を用意する
+inline void InitReference(rabbits_msgs::msg::ReferenceCommand & cmd, double body_height)
 {
+  cmd.body_height = static_cast<float>(body_height);
+  cmd.body_roll = 0.0f;
+  cmd.body_pitch = 0.0f;
   cmd.joint_name = {YAW_JOINT, PITCH_JOINT};
   const size_t n = cmd.joint_name.size();
   cmd.joint_position.assign(n, 0.0f);
@@ -30,8 +35,9 @@ inline void InitReference(rabbits_msgs::msg::ReferenceCommand & cmd)
   cmd.joint_effort.assign(n, 0.0f);
   cmd.joint_kp.assign(n, 0.0f);
   cmd.joint_kd.assign(n, 0.0f);
-  cmd.mode_name = {MODE_LOAD, MODE_FIRE, MODE_SPEED, MODE_CHASSIS};
+  cmd.mode_name = {MODE_LOAD, MODE_FIRE, MODE_SPEED, MODE_CHASSIS, MODE_STABILIZE};
   cmd.mode_value.assign(cmd.mode_name.size(), 0);
+  cmd.mode_value.back() = 1;
 }
 
 inline int IndexOf(const std::vector<std::string> & names, const std::string & name)

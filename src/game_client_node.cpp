@@ -20,6 +20,11 @@ GameClient::GameClient(const rclcpp::NodeOptions & options)
   max_yaw_rot_vel_ = this->declare_parameter("max_yaw_rot_vel", 0.0);
   max_pitch_rot_vel_ = this->declare_parameter("max_pitch_rot_vel", 0.0);
   fire_heat_ = this->declare_parameter("fire_heat", 10.0);
+  walk_scale_ = this->declare_parameter("walk_scale", 0.4);
+  body_height_default_ = this->declare_parameter("body_height_default", 0.5);
+  lean_roll_ = this->declare_parameter("lean_roll", 0.15);
+
+  view_.SetPitchLimits(-static_cast<float>(M_PI) / 12.0f, static_cast<float>(M_PI) / 6.0f);
 
   cmd_pub_ = this->create_publisher<rabbits_msgs::msg::ReferenceCommand>("reference_command", 10);
   game_data_input_sub_ = this->create_subscription<rabbits_msgs::msg::GameDataInput>(
@@ -28,6 +33,9 @@ GameClient::GameClient(const rclcpp::NodeOptions & options)
   game_data_robot_sub_ = this->create_subscription<rabbits_msgs::msg::GameDataRobot>(
     "/game_data_robot", 10,
     std::bind(&GameClient::GameDataRobotCB, this, std::placeholders::_1));
+  firmware_reboot_sub_ = this->create_subscription<std_msgs::msg::Empty>(
+    "firmware_reboot", 10,
+    std::bind(&GameClient::FirmwareRebootCB, this, std::placeholders::_1));
   timer_ = this->create_wall_timer(
     std::chrono::duration<double>(1.0 / TIMER_FREQ),
     std::bind(&GameClient::TimerCB, this));
@@ -37,27 +45,22 @@ void GameClient::GameDataInputCB(const rabbits_msgs::msg::GameDataInput::SharedP
 {
   game_data_input_msg_ = *msg;
 
-  // 砲塔（マウス）はフレーム受信ごとに1回だけ積分する。
+  // 視点（マウス）はフレーム受信ごとに1回だけ積分する。
   // mouse_delta は相対変位イベントなので、timer で毎ティック積分すると多重に積算される。
-  // yaw
-  yaw_target_ += static_cast<double>(msg->mouse_delta_x) / 400.0;
-  yaw_target_ = std::fmod(yaw_target_, 2.0 * M_PI);
-  if (yaw_target_ < 0) {
-    yaw_target_ += 2.0 * M_PI;
-  }
-  // pitch
-  pitch_target_ += static_cast<double>(msg->mouse_delta_y) / 400.0;
-  if (pitch_target_ < -M_PI / 12) {
-    pitch_target_ = -M_PI / 12;
-  }
-  if (pitch_target_ > M_PI / 6) {
-    pitch_target_ = M_PI / 6;
-  }
+  view_.AddDelta(
+    static_cast<float>(msg->mouse_delta_x / MOUSE_COUNTS_PER_RAD),
+    static_cast<float>(msg->mouse_delta_y / MOUSE_COUNTS_PER_RAD));
 }
 
 void GameClient::GameDataRobotCB(const rabbits_msgs::msg::GameDataRobot::SharedPtr msg)
 {
   game_data_robot_msg_ = *msg;
+}
+
+void GameClient::FirmwareRebootCB(const std_msgs::msg::Empty::SharedPtr)
+{
+  RCLCPP_INFO(this->get_logger(), "firmware rebooted: resetting view target");
+  view_.Reset({0.0f, 0.0f, 0.0f});
 }
 
 bool GameClient::CanLoad() const
@@ -78,49 +81,62 @@ void GameClient::TimerCB()
 
 void GameClient::UpdateCmdVel(rabbits_msgs::msg::ReferenceCommand & cmd)
 {
-  rabbits_interface::InitReference(cmd);
+  const auto & in = game_data_input_msg_;
+  rabbits_interface::InitReference(cmd, body_height_default_);
 
-  // --- 足回り
-  // 並進
-  if (game_data_input_msg_.key_w) {
-    cmd.chassis_vel.x = max_omni_vel_;
+  // --- 足回り（Ctrl で歩き: 速度を落として speed = 0）
+  const bool walk = in.key_ctrl;
+  const double vel = max_omni_vel_ * (walk ? walk_scale_ : 1.0);
+  const double rot = max_omni_rot_vel_ * (walk ? walk_scale_ : 1.0);
+  if (in.key_w) {
+    cmd.chassis_vel.x = vel;
   }
-  if (game_data_input_msg_.key_s) {
-    cmd.chassis_vel.x = -max_omni_vel_;
+  if (in.key_s) {
+    cmd.chassis_vel.x = -vel;
   }
-  if (game_data_input_msg_.key_a) {
-    cmd.chassis_vel.y = max_omni_vel_;
+  if (in.key_a) {
+    cmd.chassis_vel.y = vel;
   }
-  if (game_data_input_msg_.key_d) {
-    cmd.chassis_vel.y = -max_omni_vel_;
+  if (in.key_d) {
+    cmd.chassis_vel.y = -vel;
   }
-  // 回転
-  if (game_data_input_msg_.key_z) {
-    cmd.chassis_vel.z = max_omni_rot_vel_;
-  } else if (game_data_input_msg_.key_c) {
-    cmd.chassis_vel.z = -1.0 * max_omni_rot_vel_;
+  if (in.key_z) {
+    cmd.chassis_vel.z = rot;
+  } else if (in.key_c) {
+    cmd.chassis_vel.z = -rot;
   }
 
-  // --- 砲塔（積分は GameDataInputCB 側で実施済み。ここでは保持値を読むだけ）
-  rabbits_interface::SetJointPosition(cmd, YAW_JOINT, yaw_target_);
-  rabbits_interface::SetJointPosition(cmd, PITCH_JOINT, pitch_target_);
+  // --- 車体姿勢（Shift でしゃがみ、Q/E でリーン）
+  if (in.key_shift) {
+    cmd.body_height = 0.0f;
+  }
+  if (in.key_q) {
+    cmd.body_roll = static_cast<float>(-lean_roll_);
+  } else if (in.key_e) {
+    cmd.body_roll = static_cast<float>(lean_roll_);
+  }
+
+  // --- 視点（積分は GameDataInputCB 側で実施済み。ここでは保持値を読むだけ）
+  const rabcl::Attitude view = view_.Get();
+  rabbits_interface::SetJointPosition(cmd, YAW_JOINT, view.yaw);
+  rabbits_interface::SetJointPosition(cmd, PITCH_JOINT, view.pitch);
 
   // --- 動作モード
   uint8_t fire = 0;
   uint8_t load = 0;
-  if (game_data_input_msg_.mouse_right_button) {
+  if (in.mouse_right_button) {
     fire = 1;
-    if (game_data_input_msg_.mouse_left_button && CanLoad()) {
+    if (in.mouse_left_button && CanLoad()) {
       load = 1;
     }
   }
-  if (game_data_input_msg_.key_r) {
+  if (in.key_r) {
     load = 2;
   }
   rabbits_interface::SetMode(cmd, MODE_FIRE, fire);
   rabbits_interface::SetMode(cmd, MODE_LOAD, load);
-  rabbits_interface::SetMode(cmd, MODE_SPEED, 0);
-  rabbits_interface::SetMode(cmd, MODE_CHASSIS, game_data_input_msg_.key_shift ? 1 : 0);
+  rabbits_interface::SetMode(cmd, MODE_SPEED, walk ? 0 : 1);
+  rabbits_interface::SetMode(cmd, MODE_CHASSIS, in.key_space ? 1 : 0);
 
   cmd.header.stamp = get_clock()->now();
   cmd_pub_->publish(cmd);
